@@ -1,0 +1,395 @@
+---
+title: "Search Simulations"
+format: dashboard
+editor: visual
+server: shiny
+warning: false
+message: false
+---
+
+```{r}
+#| context: setup
+library(shiny)
+library(MASS)
+library(ggplot2)
+library(gganimate)
+library(magick)
+library(dplyr)
+library(here)
+source(here("functions/search-functions.R"))
+source(here("functions/landscape-functions.R"))
+source(here("functions/plotting-functions.R"))
+load(here("output/simdata-100-simulations-100-iterations-20-chains-15-grid-size.Rdata"))
+```
+
+```{r}
+# Set up slider parameters 
+min_variance = 1
+max_variance = 20
+min_spatial_cor = .1
+max_spatial_cor = 5
+```
+
+```{r}
+#| context: data
+# define any global variables here with context: data so that they can be read in server
+
+# set grid size
+grid_size <- 15
+
+# for the purpose of having a nice colour scale, I want to know the maximum reward given the slider inputs 
+
+# max reward should be when variance is maximum and spatial correlation is minimum, so run the kernel function with these values
+max_reward_cov <- generateCovMatrix(grid_size, min_spatial_cor, max_variance)
+rewards_max_cov <- generateRewards(max_reward_cov)
+max_reward <- max(rewards_max_cov)
+min_reward = min(rewards_max_cov)
+
+# define plot dimensions
+plot_width = 600
+plot_height = 400
+
+# find maximum value of sim data for constant y values in plotting 
+max_value <- max(simulated_data$value)
+```
+
+# Visualise Search and Landscape
+
+##  {.sidebar}
+
+```{r}
+titlePanel("Landscape Parameters")
+sliderInput(
+  "length_scale",
+  "Spatial Correlation:",
+  min = min_spatial_cor,
+  max = max_spatial_cor,
+  value = 1
+)
+
+sliderInput(
+  "sigma_f",
+  "Variance of Hypothesis Quality:",
+  min = min_variance,
+  max = max_variance,
+  value = 10
+)
+
+titlePanel("Search Parameters")
+numericInput("seed", "Set Seed", value = 123)
+numericInput("iterations", "N Iterations", value  = 100, max = 1000)
+numericInput("reject_temp", "Rejection Temperature", value  = 1, max = 100)
+numericInput("max_step", "Maximum Step Size", value  = 3, max = 15)
+
+actionButton("run", "Run Search Simulation")
+actionButton("reset", "Landscpe Only")
+
+```
+
+## Plot
+
+```{r}
+uiOutput("plotContainer")
+
+```
+
+```{r}
+#| context: server
+
+# Track state with a reactive value
+plotState <- reactiveVal("static")  # Default state is "static"
+
+# Update plot state on button clicks
+observeEvent(input$run, {
+  plotState("animation")
+})
+
+observeEvent(input$reset, {
+  plotState("static")
+})
+
+# Dynamically render the UI
+output$plotContainer <- renderUI({
+  if (plotState() == "animation") {
+    imageOutput("animation", width = paste0(plot_width,"px"), height = paste0(plot_height,"px"))
+  } else {
+    plotOutput("staticPlot", width = paste0(plot_width,"px"), height = paste0(plot_height,"px"))
+  }
+})
+  
+
+  # generate landscape in the background
+
+  # set reactive parameters
+# Set reactive parameters
+length_scale <- reactive(input$length_scale)
+sigma_f <- reactive(input$sigma_f)
+
+  # Reactive landscape generation
+arms <- reactive({
+  generataeLandscape(grid_size, length_scale(), sigma_f())
+})
+
+# Shiny reactive expressions for plotting max/min rewards
+max_reward_plotting <- reactive({
+  arms_data <- arms()  
+  current_max <- max(arms_data$reward, na.rm = TRUE)
+  max(current_max, max_reward)  # Compare with the precomputed max_reward
+})
+
+min_reward_plotting <- reactive({
+  arms_data <- arms() 
+  current_min <- min(arms_data$reward, na.rm = TRUE)
+  min(current_min, min_reward)  # Compare with the precomputed min_reward
+})
+
+# Reactive search simulation
+n_iterations <- reactive(input$iterations)
+
+# set rejection temperature
+rejection_temp <- reactive(input$reject_temp)
+
+# set maximum step size
+max_step <- reactive(input$max_step)
+
+# set seed 
+seed <- reactive(set.seed(input$seed))
+
+# Add jitter to make overlapping points visible
+search_coords <- reactive({
+  arms_data <- arms()
+  search_list <- searchMH(n_iterations = n_iterations(), landscape_df = arms_data, rejection_temp = rejection_temp(), max_step = max_step())
+  search <- search_list[[1]] # update this if eventually want to plot multiple chains. 
+  cbind.data.frame(
+    x = search$all_proposal_x,
+    y = search$all_proposal_y,
+    decision = search$all_proposal_decision
+  )
+})
+
+# Static plot rendering
+output$staticPlot <- renderPlot({
+  arms_data <- arms()  # Get arms data
+  ggplot(arms_data, aes(x = x, y = y)) +
+    geom_tile(aes(fill = rewards)) +
+    scale_fill_viridis_c(option = "plasma", limits = c(min_reward_plotting(), max_reward_plotting())) +
+    labs(
+      fill = "Hypothesis Quality"
+    ) +
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          legend.text = element_text(size = 15))
+})
+
+
+
+# Animation rendering
+output$animation <- renderImage({
+  # Get search coordinates
+  search_data <- search_coords()  # Get search coordinates
+  
+  # Add jitter to search coordinates
+  set.seed(123)
+  search_data <- search_data %>%
+    mutate(
+      x_jitter = x + runif(n(), -0, 0),
+      y_jitter = y + runif(n(), -0, 0),
+      index = 1:length(x)
+    )
+  
+  # Generate the animated plot
+  animated_plot <- ggplot(arms(), aes(x = x, y = y)) +
+    geom_tile(aes(fill = rewards)) +
+    scale_fill_viridis_c(option = "plasma",
+                       limits = c(min_reward_plotting(), max_reward_plotting())) +    
+    geom_path(data = search_data, aes(x = x_jitter, y = y_jitter)) +
+    geom_point(
+      data = search_data,
+      aes(x = x_jitter, y = y_jitter, colour = decision),
+      alpha = 1,
+      size = 1
+    ) +
+    scale_colour_manual(values = c("green", "red")) +
+    transition_reveal(index)
+  
+  # Save animation to a temporary file with the same dimensions as the static plot
+  temp_gif <- tempfile(fileext = ".gif")
+  animate(
+    animated_plot,
+    nframes = 20,
+    fps = 10,
+    renderer = gifski_renderer(temp_gif),
+    width = plot_width,  # Match UI width
+    height = plot_height  # Match UI height
+  )
+  
+  # Return the animation as an image
+  list(src = temp_gif, contentType = "image/gif")
+}, deleteFile = TRUE)
+
+# Save animation to file when button is clicked
+observeEvent(input$save, {
+  # Get search coordinates
+  search_data <- search_coords()
+  
+  # Add jitter to search coordinates
+  set.seed(123)
+  search_data <- search_data %>%
+    mutate(
+      x_jitter = x + runif(n(), -0, 0),
+      y_jitter = y + runif(n(), -0, 0),
+      index = 1:length(x)
+    )
+  
+  # Generate the animated plot
+  animated_plot <- ggplot(arms(), aes(x = x, y = y)) +
+    geom_tile(aes(fill = rewards)) +
+    scale_fill_viridis_c(option = "plasma",
+                       limits = c(min_reward_plotting(), max_reward_plotting())) +    
+    geom_path(data = search_data, aes(x = x_jitter, y = y_jitter)) +
+    geom_point(
+      data = search_data,
+      aes(x = x_jitter, y = y_jitter, colour = decision),
+      alpha = 1,
+      size = 1
+    ) +
+    scale_colour_manual(values = c("green", "red")) +
+    transition_reveal(index)
+  
+  # Save the animation to a fixed file path with simulation parameters
+  save_path <- file.path(getwd(), paste0("plots/search-animations/",n_iterations(),"-iter-",length_scale(),"-landCor-",sigma_f(),"-landVar-",rejection_temp,"-rejectTemp-",max_step(),"-maxStep-animation.gif"))
+  animate(
+    animated_plot,
+    nframes = 20,
+    fps = 10,
+    renderer = gifski_renderer(save_path),
+    width = plot_width*2,  # make them a bit bigger so higher def
+    height = plot_height*2  
+  )
+  
+  # Notify the user that the animation has been saved
+  showNotification(paste("Animation saved to:", save_path), type = "message")
+})
+```
+
+```{r}
+actionButton("save", "Save Animation", width = plot_width)
+```
+
+# Simulation Results
+
+##  {.sidebar}
+### Choose Parameter Ranges
+
+```{r}
+sliderInput(
+  "iterations_sim",
+  "N Iterations",
+  min = 1,
+  max = 100,
+  value = c(1, 100),
+  animate = TRUE
+)
+sliderInput(
+  "max_step_sim",
+  "Maximum Step Size",
+  min = 1,
+  max = 7,
+  value = c(1, 4)
+)
+sliderInput(
+  "rejection_temp_sim",
+  "Rejection Temperature",
+  min = 0.1,
+  max = 10,
+  value = c(0.1, 10)
+)
+sliderInput(
+  "var_landscape_sim",
+  "Variance of Hypothesis Quality",
+  min = 0.1,
+  max = 20,
+  value = c(0.1, 20)
+)
+
+sliderInput(
+  "cor_landscape_sim",
+  "Spatial Correlation",
+  min = 0.1,
+  max = 10,
+  value = c(0.1,10)
+)
+
+```
+
+```{r}
+#| context: server
+data <- reactive({
+  print(input$cor_landscape_sim)
+  cor <- c(input$cor_landscape_sim)
+  var <- c(input$var_landscape_sim)
+  iter <- c(input$iterations_sim)
+  step <- c(input$max_step_sim)
+  reject <- c(input$rejection_temp_sim)
+
+  # filter data frame to be insider the slider ranges
+  simulated_data %>%
+    filter(
+      cor_landscape >= cor[1], cor_landscape <= cor[2],
+      var_landscape >= var[1], var_landscape <= var[2],
+      iteration >= iter[1], iteration <= iter[2],
+      max_step_size >= step[1], max_step_size <= step[2],
+      rejection_temp >= reject[1], rejection_temp <= step[2]
+    )
+})
+
+output$var_plot <- renderPlot({
+  plotHypQuality("var_landscape", data(), ylim = max_value)
+})
+
+output$cor_plot <- renderPlot({
+  plotHypQuality("cor_landscape", data(), ylim = max_value)
+})
+
+output$iterations_plot <- renderPlot({
+  plotHypQuality("iteration", data(), ylim = max_value)
+})
+
+output$reject_plot <- renderPlot({
+  plotHypQuality("rejection_temp", data(), ylim = max_value)
+})
+
+output$step_plot <- renderPlot({
+  plotHypQuality("max_step_size", data(), ylim = max_value)
+})
+
+```
+
+## Plot
+
+```{css}
+/* add a custom class that lets plots be scrollable */
+<style>
+  .scrollable-plots {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Adjust spacing between plots */
+    overflow-y: scroll;
+    max-height: 80vh; /* Set a maximum height to allow scrolling */
+    width: 80%;
+  }
+  .scrollable-plots .shiny-plot-output {
+    flex-shrink: 0;
+  }
+</style>
+```
+
+```{r}
+div(class = "scrollable-plots",
+plotOutput("var_plot", width = plot_width, height = plot_height),
+plotOutput("cor_plot", width = plot_width, height = plot_height),
+plotOutput("iterations_plot", width = plot_width, height = plot_height),
+plotOutput("reject_plot", width = plot_width, height = plot_height),
+plotOutput("step_plot", width = plot_width, height = plot_height)
+)
+```
