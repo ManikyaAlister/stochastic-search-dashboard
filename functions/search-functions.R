@@ -52,11 +52,27 @@ searchMH <- function(n_iterations,
     
     # Rejection rule function with a scaling factor
     rejection_rule <- function(current_value, proposal_value, temp = 1) {
-      # Calculate acceptance probability with the scaling factor
-      acceptance_prob <- min(1, exp((proposal_value - current_value) / temp)) 
-      runif(1) < acceptance_prob # Accept with probability 'acceptance_prob'
+      # normalize values to ensure they are not negative
+      proposal_value <- proposal_value - min(proposal_value, current_value)
+      current_value <- current_value - min(proposal_value, current_value)
+      
+      
+      log_proposal <- log(proposal_value)
+      log_current <- log(current_value)
+      # Calculate acceptance probability in log-space
+      log_acceptance_prob <- (log_proposal - log_current) / temp
+      acceptance_prob <- min(1, exp(log_acceptance_prob)) 
+      print(acceptance_prob)
+      runif(1) < acceptance_prob
     }
+
     
+    # rejection_rule <- function(current_log_value, proposal_log_value, temp = 1) {
+    #   # Calculate acceptance probability using log values
+    #   acceptance_prob <- min(1, exp((proposal_log_value - current_log_value) / temp))
+    #   runif(1) < acceptance_prob
+    # }
+    # 
     
     
     # Begin sampling process

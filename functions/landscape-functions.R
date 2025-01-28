@@ -35,7 +35,7 @@ generateRewards <- function(cov_matrix) {
   set.seed(100)
   n_arms <- nrow(cov_matrix)
   # Sample rewards from a multivariate normal distribution
-  mean_rewards <- rep(0, n_arms)  # Mean rewards centered however because they'll be normalized. Higher is better to avoid negative values. 
+  mean_rewards <- rep(20, n_arms)  # Mean rewards centered however because they'll be normalized. Higher is better to avoid negative values. 
   rewards <- mvrnorm(1, mu = mean_rewards, Sigma = cov_matrix)
   rewards
   
@@ -58,6 +58,12 @@ generataeLandscape = function(grid_size, length_scale, sigma_f){
   
   #  generate rewards
   arms$rewards <- generateRewards(cov_matrix)
+  
+  # normalise
+  rewards <- arms$rewards
+  arms$rewards <- rewards/sum(rewards)
+  
+  #print(paste("Sum rewards ",sum(arms$rewards)))
   
   # return
   arms
