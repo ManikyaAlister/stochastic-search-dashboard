@@ -107,13 +107,13 @@ grid-auto-rows: minmax(0, 1fr);">
 <div class="cell-output-display">
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="length_scale-label" for="length_scale">Spatial Correlation:</label>
-<input class="js-range-slider" id="length_scale" data-skin="shiny" data-min="0.1" data-max="5" data-from="1" data-step="0.05" data-grid="true" data-grid-num="9.8" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number">
+<input class="js-range-slider" id="length_scale" data-skin="shiny" data-min="0.1" data-max="30" data-from="1" data-step="0.5" data-grid="true" data-grid-num="9.96666666666667" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number">
 </div>
 </div>
 <div class="cell-output-display">
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="sigma_f-label" for="sigma_f">Variance of Hypothesis Quality:</label>
-<input class="js-range-slider" id="sigma_f" data-skin="shiny" data-min="1" data-max="20" data-from="10" data-step="1" data-grid="true" data-grid-num="9.5" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number">
+<input class="js-range-slider" id="sigma_f" data-skin="shiny" data-min="0.1" data-max="1" data-from="10" data-step="0.01" data-grid="true" data-grid-num="10" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-data-type="number">
 </div>
 </div>
 <div class="cell-output-display">
@@ -242,25 +242,25 @@ Ranges
 <div class="cell-output-display">
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="max_step_sim-label" for="max_step_sim">Maximum Step Size</label>
-<input class="js-range-slider" id="max_step_sim" data-skin="shiny" data-type="double" data-min="1" data-max="7" data-from="1" data-to="4" data-step="1" data-grid="true" data-grid-num="6" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
+<input class="js-range-slider" id="max_step_sim" data-skin="shiny" data-type="double" data-min="1" data-max="7" data-from="1" data-to="7" data-step="1" data-grid="true" data-grid-num="6" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
 </div>
 </div>
 <div class="cell-output-display">
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="rejection_temp_sim-label" for="rejection_temp_sim">Rejection Temperature</label>
-<input class="js-range-slider" id="rejection_temp_sim" data-skin="shiny" data-type="double" data-min="0" data-max="0.1" data-from="0" data-to="0.1" data-step="0.001" data-grid="true" data-grid-num="10" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
+<input class="js-range-slider" id="rejection_temp_sim" data-skin="shiny" data-type="double" data-min="0" data-max="0" data-from="0" data-to="1" data-step="0.02" data-grid="true" data-grid-num="NaN" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
 </div>
 </div>
 <div class="cell-output-display">
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="var_landscape_sim-label" for="var_landscape_sim">Variance of Hypothesis Quality</label>
-<input class="js-range-slider" id="var_landscape_sim" data-skin="shiny" data-type="double" data-min="0.1" data-max="20" data-from="0.1" data-to="20" data-step="0.2" data-grid="true" data-grid-num="9.95" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
+<input class="js-range-slider" id="var_landscape_sim" data-skin="shiny" data-type="double" data-min="0.1" data-max="3" data-from="0.1" data-to="3" data-step="0.05" data-grid="true" data-grid-num="9.66666666666667" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
 </div>
 </div>
 <div class="cell-output-display">
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="cor_landscape_sim-label" for="cor_landscape_sim">Spatial Correlation</label>
-<input class="js-range-slider" id="cor_landscape_sim" data-skin="shiny" data-type="double" data-min="0.1" data-max="10" data-from="0.1" data-to="10" data-step="0.1" data-grid="true" data-grid-num="9.9" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
+<input class="js-range-slider" id="cor_landscape_sim" data-skin="shiny" data-type="double" data-min="0.1" data-max="5" data-from="0.1" data-to="5" data-step="0.05" data-grid="true" data-grid-num="9.8" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="number">
 </div>
 </div>
 </section>
@@ -285,29 +285,30 @@ library(gganimate)
 library(magick)
 library(dplyr)
 library(here)
-source(here("functions/search-functions.R"))
 source(here("functions/landscape-functions.R"))
+source(here("functions/search-functions.R"))
 source(here("functions/plotting-functions.R"))
-load(here("output/simdata-norm-100-simulations-100-iterations-20-chains-10-grid-size.Rdata"))
+load(here("output/simdata-norm-1000-simulations-100-iterations-20-chains-10-grid-siz-temp-0-step-5fixed-highvar-cor-1p5fixed.Rdata"))
 </script>
  
 <script type="application/shiny-prerendered" data-context="data">
 # define any global variables here with context: data so that they can be read in server
 
 # set grid size
-grid_size <- 15
+grid_size <- 10
 
 # for the purpose of having a nice colour scale, I want to know the maximum reward given the slider inputs 
 
 # max reward should be when variance is maximum and spatial correlation is minimum, so run the kernel function with these values
 # max_reward_cov <- generateCovMatrix(grid_size, min_spatial_cor, max_variance)
-# rewards_max_cov <- generateRewards(max_reward_cov)
-# max_reward <- max(rewards_max_cov)
-# min_reward = min(rewards_max_cov)
-# generaste landscape that should have the most extreme (max/min) variance in rewards
-extreme_landscape <- generataeLandscape(grid_size, min_spatial_cor, max_variance)
-landscape_rewards <- extreme_landscape$rewards
-max_reward <- max(landscape_rewards)
+# likelihoods_max_cov <- generatelikelihoods(max_reward_cov)
+# max_reward <- max(likelihoods_max_cov)
+# min_reward = min(likelihoods_max_cov)
+
+# generaste landscape that should have the most extreme (max/min) variance in likelihoods
+extreme_landscape <- generateLandscape(grid_size, min_spatial_cor, max_variance)
+landscape_likelihoods <- extreme_landscape$likelihoods
+max_reward <- max(landscape_likelihoods)
 min_reward <- 0
 
 #print(max_reward)
@@ -355,19 +356,19 @@ sigma_f <- reactive(input$sigma_f)
 
   # Reactive landscape generation
 arms <- reactive({
-  generataeLandscape(grid_size, length_scale(), sigma_f())
+  generateLandscape(grid_size, length_scale(), sigma_f())
 })
 
-# Shiny reactive expressions for plotting max/min rewards
+# Shiny reactive expressions for plotting max/min likelihoods
 max_reward_plotting <- reactive({
   arms_data <- arms()  
-  current_max <- max(arms_data$reward, na.rm = TRUE)
+  current_max <- max(arms_data$likelihood, na.rm = TRUE)
   max(current_max, max_reward)  # Compare with the precomputed max_reward
 })
 
 min_reward_plotting <- reactive({
   arms_data <- arms() 
-  current_min <- min(arms_data$reward, na.rm = TRUE)
+  current_min <- min(arms_data$likelihood, na.rm = TRUE)
   min(current_min, min_reward)  # Compare with the precomputed min_reward
 })
 
@@ -399,7 +400,7 @@ search_coords <- reactive({
 output$staticPlot <- renderPlot({
   arms_data <- arms()  # Get arms data
   ggplot(arms_data, aes(x = x, y = y)) +
-    geom_tile(aes(fill = rewards)) +
+    geom_tile(aes(fill = likelihoods)) +
     scale_fill_viridis_c(option = "plasma", limits = c(min_reward_plotting(), max_reward_plotting())) +
     labs(
       fill = "Hypothesis Quality"
@@ -408,6 +409,7 @@ output$staticPlot <- renderPlot({
     theme(text = element_text(size = 20),
           legend.text = element_text(size = 15))
 })
+
 
 
 
@@ -427,7 +429,7 @@ output$animation <- renderImage({
   
   # Generate the animated plot
   animated_plot <- ggplot(arms(), aes(x = x, y = y)) +
-    geom_tile(aes(fill = rewards)) +
+    geom_tile(aes(fill = likelihoods)) +
     scale_fill_viridis_c(option = "plasma",
                        limits = c(min_reward_plotting(), max_reward_plotting())) +    
     geom_path(data = search_data, aes(x = x_jitter, y = y_jitter)) +
@@ -457,8 +459,7 @@ output$animation <- renderImage({
 
 # Save animation to file when button is clicked
 observeEvent(input$save, {
-  # Get search coordinates
-  search_data <- search_coords()
+ search_data <- search_coords()  # Get search coordinates
   
   # Add jitter to search coordinates
   set.seed(123)
@@ -471,7 +472,7 @@ observeEvent(input$save, {
   
   # Generate the animated plot
   animated_plot <- ggplot(arms(), aes(x = x, y = y)) +
-    geom_tile(aes(fill = rewards)) +
+    geom_tile(aes(fill = likelihoods)) +
     scale_fill_viridis_c(option = "plasma",
                        limits = c(min_reward_plotting(), max_reward_plotting())) +    
     geom_path(data = search_data, aes(x = x_jitter, y = y_jitter)) +
@@ -484,15 +485,24 @@ observeEvent(input$save, {
     scale_colour_manual(values = c("green", "red")) +
     transition_reveal(index)
   
+  # n_iter <- n_iterations()
+  # print(n_iter)
+  # length_s <- length_scale()
+  # print(length_s)
+  # print(sigma_f)
+  # print(rejection)
+  
+  
+  
   # Save the animation to a fixed file path with simulation parameters
-  save_path <- file.path(getwd(), paste0("plots/search-animations/",n_iterations(),"-iter-",length_scale(),"-landCor-",sigma_f(),"-landVar-",rejection_temp,"-rejectTemp-",max_step(),"-maxStep-animation.gif"))
+  save_path <- file.path(here(paste0("plots/search-animations/",n_iterations(),"-iter-",length_scale(),"-landCor-",sigma_f(),"-landVar-",rejection_temp(),"-rejectTemp-",max_step(),"-maxStep-animation.gif")))
   animate(
     animated_plot,
     nframes = 20,
     fps = 10,
     renderer = gifski_renderer(save_path),
-    width = plot_width*2,  # make them a bit bigger so higher def
-    height = plot_height*2  
+    width = plot_width,  # make them a bit bigger so higher def
+    height = plot_height  
   )
   
   # Notify the user that the animation has been saved
@@ -571,7 +581,7 @@ output$step_plot <- renderPlot({
 })
 
 output$consensus_plot <- renderPlot({
-  plotConsensusQuality(data())
+  plotConsensusQuality(data(), smooth_method = "gam")
 })
 
 </script>

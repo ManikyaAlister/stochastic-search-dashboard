@@ -50,3 +50,6 @@ rsconnect/
 
 # DS Store
 .DS_store
+
+# ignore output folder as it has big files
+output/*

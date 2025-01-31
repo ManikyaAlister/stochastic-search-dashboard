@@ -49,25 +49,62 @@ generateRewards <- function(cov_matrix) {
 }
 
 
-generataeLandscape = function(grid_size, length_scale, sigma_f){
+# function to generate likelihoods instead of rewards
+generateLikelihoods <- function(cov_matrix) {
+  set.seed(100)
+  n_arms <- nrow(cov_matrix)
+
+  # Sample from a multivariate normal distribution
+  mean_values <- rep(20, n_arms)  # Mean values for the Gaussian process
+  values <- mvrnorm(1, mu = mean_values, Sigma = cov_matrix)
+
+  # Transform into likelihoods using exponentiation
+  likelihoods <- exp(values)  # Exponentiate to ensure positivity
+
+  # Normalize to sum to 1
+  likelihoods <- likelihoods / sum(likelihoods)
+
+  likelihoods
+}
+
+# generateLikelihoods <- function(cov_matrix) {    
+#   set.seed(100)
+#   n_arms <- nrow(cov_matrix)
+#   
+#   # Mean rewards with reduced centering
+#   mean_rewards <- rep(10, n_arms) 
+#   
+#   # Sample rewards
+#   rewards <- mvrnorm(1, mu = mean_rewards, Sigma = cov_matrix)
+#   
+#   # Apply softmax normalization to get likelihoods
+#   softmax <- function(x) {
+#     exp_x <- exp(x - max(x)) # Numerical stability
+#     exp_x / sum(exp_x)
+#   }
+#   likelihoods <- softmax(rewards)
+#   
+#   likelihoods
+# }
+
+
+# Function to generate the landscape with likelihoods
+generateLandscape <- function(grid_size, length_scale, sigma_f) {
   # Set up a 2D grid of arms/hypotheses (e.g., 10x10)
   arms <- expand.grid(x = seq(1, grid_size), y = seq(1, grid_size))
   
-  # generate covariance matrix
+  # Generate covariance matrix
   cov_matrix <- generateCovMatrix(grid_size, length_scale, sigma_f)
   
-  #  generate rewards
-  arms$rewards <- generateRewards(cov_matrix)
-  
-  # normalise
-  rewards <- arms$rewards
-  arms$rewards <- rewards/sum(rewards)
-  
-  #print(paste("Sum rewards ",sum(arms$rewards)))
-  
-  # return
+  # Generate likelihoods
+  arms <- arms %>% 
+    mutate(likelihoods = generateLikelihoods(cov_matrix),
+           index = 1:nrow(arms),
+           rank = (max(index)+1)-rank(likelihoods, ties.method = "average") # rearrange so highest likelihood is ranked 1
+    )
+
+  # Return
   arms
 }
 
-
-
+t = generateLandscape(10,.1,.1)

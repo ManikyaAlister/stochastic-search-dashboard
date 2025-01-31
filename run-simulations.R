@@ -4,7 +4,7 @@ source(here("functions/simulation-functions.R"))
 
 
 # set up the number of unique simulations: each simulation corresponds to a unique landscape 
-n_simulations <- 100
+n_simulations <- 1000
 
 # set up the number of chains per simulation
 n_chains <- 20
@@ -17,10 +17,10 @@ grid_size <- 10
 
 # set up parameters that are varying in each simulation
 sim_parameters <- sampleSimParameters(
-  cor_landscape = c(0.1,10),
-  var_landscape = c(0.1, 20),
-  max_step_sizes = c(1,7),
-  rejection_temp = c(0, 0.1),
+  cor_landscape = c(0.1,6),
+  var_landscape = c(0.1,3),
+  max_step_sizes = c(5,5),
+  rejection_temp = c(0, 0),
   n_simulations = n_simulations
 )
 
@@ -53,7 +53,7 @@ save(simulated_data, file = here(
     n_chains,
     "-chains-",
     grid_size,
-    "-grid-size.Rdata"
+    "-grid-size-temp-0-step-5fixed-rank-highcor.Rdata"
   )
 ))
 

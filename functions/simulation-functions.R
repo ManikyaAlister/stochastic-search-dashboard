@@ -81,7 +81,7 @@ runSearchSimulation = function(sim_parameters, grid_size = 10, n_iterations, n_c
     
     # generate landscape
     landscape_i <-
-      generataeLandscape(grid_size, cor_landscape, var_landscape)
+      generateLandscape(grid_size, cor_landscape, var_landscape)
   
 
        # search landscape
@@ -93,6 +93,7 @@ runSearchSimulation = function(sim_parameters, grid_size = 10, n_iterations, n_c
            max_step = max_step_size,
            rejection_temp = rejection_temp
          )
+      
        
        # extract the position of the ground truth
        ground_truth_position_i <-
@@ -110,6 +111,7 @@ runSearchSimulation = function(sim_parameters, grid_size = 10, n_iterations, n_c
            x = chain_data$x,
            y = chain_data$y,
            value = chain_data$search_values,
+           rank = chain_data$rank,
            #index = names(search_i),
            iteration = chain_data$iteration,
            cor_landscape = cor_landscape, 
