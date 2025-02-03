@@ -4,7 +4,7 @@ source(here("functions/simulation-functions.R"))
 
 
 # set up the number of unique simulations: each simulation corresponds to a unique landscape 
-n_simulations <- 1000
+n_simulations <- 2000
 
 # set up the number of chains per simulation
 n_chains <- 20

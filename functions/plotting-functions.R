@@ -4,7 +4,9 @@ plotHypQuality = function(parameter,
                           stat = "median",
                           xlab = parameter,
                           ylab = "Likelihood of Testimony",
+                          colour_direction = 1,
                           lm = TRUE,
+                          title = NULL, 
                           ylim = NA,
                           xlim = NA,
                           smooth_method = "loess") {
@@ -29,14 +31,19 @@ plotHypQuality = function(parameter,
   
   d_sum %>%
     ggplot(aes(x = plot_param, y = get(stat))) +
-    geom_point(alpha = .2) +
-    geom_smooth(linewidth = 2.5, method = smooth_method) +
+    geom_point(alpha = .2, aes(colour = get(stat))) +
+    geom_smooth(linewidth = 2.8, method = smooth_method, colour = "white") + # white outline
+    geom_smooth(linewidth = 2.4, method = smooth_method, colour = "black") + 
+    scale_colour_viridis_c(option = "plasma", direction = colour_direction, limits = c(0,ylim))+
+    
     ylim(0, ylim) +
     xlim(min(data$plot_param), xlim) +
-    labs(x = xlab, y = ylab) +
+    labs(x = xlab, y = ylab, title = title) +
     theme_bw() +
     theme(axis.text = element_text(size = 16),
-          axis.title = element_text(size = 16))
+          axis.title = element_text(size = 16),
+          plot.title = element_text(size = 24, hjust = 0.5),
+          legend.position = "none")
   
 }
 
@@ -47,6 +54,7 @@ plotConsensusQuality = function(
     stat = "median",
     #xlab = parameter,
     ylab = "Likelihood of Testimony",
+    title = NULL,
     lm = TRUE,
     ylim = NA,
     xlim = NA,
@@ -64,10 +72,12 @@ plotConsensusQuality = function(
     geom_smooth(method = smooth_method, linewidth = 2.5, alpha = .4)+
     scale_color_brewer(palette = "Set2")+
     scale_fill_brewer(palette = "Set2")+
-    labs(y = ylab,x = "Consensus Proportion")+
+    labs(y = ylab,x = "Consensus Proportion", title = title)+
     theme_bw()+
     theme(axis.text = element_text(size = 16),
-          axis.title = element_text(size = 16))
+          axis.title = element_text(size = 16),
+          plot.title = element_text(size = 24, hjust = 0.5),
+    )
   
   p
 }

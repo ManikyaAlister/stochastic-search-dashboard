@@ -1,0 +1,289 @@
+---
+title: "Social Search CogSci"
+format: html
+editor: visual
+---
+
+```{r}
+library(here, tidyverse, ggpubr)
+source(here("functions/plotting-functions.R"))
+#load(here("output/simdata-norm-1000-simulations-100-iterations-20-chains-10-grid-siz-temp-0-step-5fixed-highvar-cor-1p5fixed.Rdata"))
+load(here("output/simdata-norm-2000-simulations-100-iterations-20-chains-10-grid-size-temp-0-step-5fixed-rank.Rdata"))
+#load(here("output/simdata-norm-2000-simulations-100-iterations-20-chains-10-grid-size-temp-0-step-5fixed-rank-highcor.Rdata"))
+```
+
+```{r}
+p_var_raw <- plotHypQuality("var_landscape", stat = "median",data = simulated_data, xlab = "Hypothesis Variance", ylab = "Likelihood of Testimony", ylim = 0.3, title = "Knowability: Variance")
+p_var_raw
+```
+
+```{r}
+p_var_rel <- plotHypQuality("var_landscape", stat = "median_norm", ylab = "Relative Likelihood of Testimony", data = simulated_data)
+```
+
+```{r}
+p_var_rank <- plotHypQuality("var_landscape", stat = "median_rank", ylab = str_wrap("Rank of Testimony (Lower=Better)",20), xlab = "Hypothesis Variance", data = simulated_data, colour_direction = -1)
+```
+
+```{r}
+p_var_scale <- plotHypQuality("var_landscape", stat = "p_hyp_scaled",data = simulated_data)
+```
+
+```{r}
+p_cor_raw <- plotHypQuality("cor_landscape", stat = "median",xlab = "Spatial Correlation of Hypotheses",ylab = "Likelihood of Testimony",data = simulated_data, ylim = 0.3, title = "Knowability: Correlation")
+```
+
+```{r}
+p_cor_rel <-plotHypQuality("cor_landscape", stat = "median_norm", ylab = "Relative Likelihood of Testimony", data = simulated_data, smooth_method = "loess")
+```
+
+```{r}
+p_cor_rank <- plotHypQuality("cor_landscape", stat = "median_rank",ylab = str_wrap("Rank of Testimony (Lower=Better)",20),xlab = "Spatial Correlation of Hypotheses",data = simulated_data, colour_direction = -1)
+```
+
+```{r}
+ggarrange(p_var_raw, p_cor_raw,p_var_rank,p_cor_rank)
+ggsave(filename = here("plots/combined_knowability.png"), width = 12, height = 6)
+```
+
+```{r}
+plotHypQualityGroup = function(parameter,
+                          data,
+                          xlab = parameter,
+                          ylab = "Mean Hypothesis Quality",
+                          lm = TRUE,
+                          ylim = NA,
+                          xlim = NA,
+                          smooth_method = NULL) {
+  data = as.data.frame(data)
+  data$plot_param <- data[, parameter]
+  data$is_ground_truth <- ifelse(data$value == data$ground_truth_value, TRUE, FALSE)
+  data$scaled_col = (data$value - min(data$value)) / (max(data$value) - min(data$value)) * 1
+  
+# get the range of the variance param in the simularion
+range_var <- range(data$var_landscape)
+mid_var <- (range_var[1] + range_var[2])/2
+  
+  
+  d_sum <-  data %>%
+    group_by(plot_param) %>%
+    summarise(
+      n = n(),
+      prob_ground_truth = sum(is_ground_truth) / n,
+      mean = median(value)
+    )%>%
+    mutate(p_hyp_scaled = (mean - min(mean)) / (max(mean) - min(mean)) * 1,
+           norm_mean = mean / sum(mean),
+           group = ifelse(plot_param < mid_var,"low", "high")) 
+  
+  d_sum %>%
+    ggplot(aes(x = plot_param, y = mean, group = group, colour = group, fill = group)) +
+    geom_smooth(linewidth = 2.5, method = smooth_method) +
+    geom_point(alpha = .2) +
+    #ylim(0, ylim) +
+    xlim(min(data$plot_param), xlim) +
+    labs(x = xlab, y = ylab) +
+    theme_bw() +
+    theme(axis.text = element_text(size = 18),
+          axis.title = element_text(size = 25))
+  
+}
+```
+
+```{r}
+
+# Define low, mid, and high cutoffs for variance
+low_var <- quantile(range_var, 1/3)
+high_var <- quantile(range_var, 2/3)
+
+# Define low, mid, and high cutoffs for correlation (inverted: high correlation = low knowability)
+low_cor <- quantile(range_cor, 2/3)
+high_cor <- quantile(range_cor, 1/3)
+
+data <- simulated_data %>%
+  mutate(
+    Variance = factor(case_when(
+      var_landscape < low_var  ~ "low",
+      var_landscape > high_var ~ "high",
+      TRUE                     ~ "mid"
+    ), levels = c("low", "mid", "high")),
+    
+    Correlation = factor(case_when(
+      cor_landscape > low_cor  ~ "low",  # High correlation = low knowability
+      cor_landscape < high_cor ~ "high", # Low correlation = high knowability
+      TRUE                     ~ "mid"
+    ), levels = c("low", "mid", "high")),
+    
+    Knowability = factor(case_when(
+      Variance == "low" & Correlation == "low" ~ "low",
+      Variance == "high" & Correlation == "high" ~ "high",
+      TRUE ~ "mid"
+    ), levels = c("low", "mid", "high"))
+  )
+```
+
+```{r}
+data <- data %>%
+  mutate(Expertise = case_when(
+    iteration < 51 ~ "low",
+    TRUE ~ "high"
+  ))
+```
+
+
+```{r}
+d_sum <-  data %>%
+    group_by(iteration, Knowability) %>%
+    summarise(
+      n = n(),
+      #prob_ground_truth = sum(is_ground_truth) / n,
+      median = median(value),
+      median_rank = median(rank)
+    )%>%
+    mutate(p_hyp_scaled = (median - min(median)) / (max(median) - min(median)) * 1,
+           norm_median = median / sum(median),
+           ) 
+  
+  p_expert_know <- d_sum %>%
+    ggplot(aes(x = iteration, y = median)) +
+    geom_smooth(linewidth = 2.5, alpha = .8,aes(fill = Knowability, group = Knowability, colour = Knowability)) +
+    scale_color_brewer(palette = "Set2")+
+    scale_fill_brewer(palette = "Set2")+
+    geom_point(alpha = .2) +
+    #ylim(0, ylim) +
+    #xlim(min(data$iteration), xlim) +
+    labs(group = "Knowability", x = "Expertise", y = "Likelihood of Testimony", title = "Expertise") +
+    theme_bw() +
+    theme(axis.text = element_text(size = 16),
+          axis.title = element_text(size = 16),
+          plot.title = element_text(size = 24, hjust = 0.5),
+)
+
+p_expert_know
+```
+
+```{r}
+d_sum <-  data %>%
+    group_by(iteration, Knowability) %>%
+    summarise(
+      n = n(),
+      #prob_ground_truth = sum(is_ground_truth) / n,
+      median = median(value),
+      median_rank = median(rank)
+    )%>%
+    mutate(p_hyp_scaled = (median - min(median)) / (max(median) - min(median)) * 1,
+           norm_median = median / sum(median),
+           ) 
+  
+  p_expert_know_rank <- d_sum %>%
+    ggplot(aes(x = iteration, y = median_rank, colour = Knowability)) +
+    geom_smooth(linewidth = 2.5, alpha = .8,aes(fill = Knowability, group = Knowability, colour = Knowability)) +
+    scale_color_brewer(palette = "Set2")+
+    scale_fill_brewer(palette = "Set2")+
+    geom_point(alpha = .2) +
+    #ylim(0, ylim) +
+    #xlim(min(data$iteration), xlim) +
+    labs(group = "Knowability", x = "Expertise", y = str_wrap("Rank of Testimony (Lower=Better)",20)) +
+    theme_bw() +
+    theme(axis.text = element_text(size = 16),
+          axis.title = element_text(size = 16))
+
+p_expert_know_rank
+```
+
+
+```{r}
+d_sum <-  data %>%
+    group_by(iteration, Correlation) %>%
+    summarise(
+      n = n(),
+      #prob_ground_truth = sum(is_ground_truth) / n,
+      median = median(value),
+      median_rank = median(rank)
+    )%>%
+    mutate(p_hyp_scaled = (median - min(median)) / (max(median) - min(median)) * 1,
+           norm_median = median / sum(median),
+           ) 
+  
+  d_sum %>%
+    ggplot(aes(x = iteration, y = median_rank)) +
+    geom_smooth(linewidth = 1, alpha = .8,aes(fill = Correlation, group = Correlation, colour = Correlation)) +
+    scale_color_brewer(palette = "Set2")+
+    scale_fill_brewer(palette = "Set2")+
+    #ßgeom_smooth(linewidth = 2.5) +
+    geom_point(alpha = .2) +
+    #ylim(0, ylim) +
+    #xlim(min(data$iteration), xlim) +
+    labs(group = "Knowability", x = "Expertise") +
+    theme_bw() +
+    theme(axis.text = element_text(size = 18),
+          axis.title = element_text(size = 25))
+
+
+```
+
+```{r}
+d_sum <-  data %>%
+    group_by(iteration, Variance) %>%
+    summarise(
+      n = n(),
+      #prob_ground_truth = sum(is_ground_truth) / n,
+      median = median(value),
+      median_rank = median(rank)
+    )%>%
+    mutate(p_hyp_scaled = (median - min(median)) / (max(median) - min(median)) * 1,
+           norm_median = median / sum(median),
+           ) 
+  
+  d_sum %>%
+    ggplot(aes(x = iteration, y = median_rank)) +
+    geom_smooth(linewidth = 1, alpha = .8,aes(fill = Variance, group = Variance, colour = Variance)) +
+    scale_color_brewer(palette = "Set2")+
+    scale_fill_brewer(palette = "Set2")+
+    #ßgeom_smooth(linewidth = 2.5) +
+    geom_point(alpha = .2) +
+    #ylim(0, ylim) +
+    #xlim(min(data$iteration), xlim) +
+    labs(group = "Knowability", x = "Expertise") +
+    theme_bw() +
+    theme(axis.text = element_text(size = 18),
+          axis.title = element_text(size = 25))
+```
+```{r}
+p_consensus_know_rank <- plotConsensusQuality(data, smooth_method = "gam", stat = "median_rank", ylab= str_wrap("Rank of Testimony (Lower=Better)",20))
+p_consensus_know_rank
+```
+
+
+```{r}
+p_consensus_know <- plotConsensusQuality(data, smooth_method = "gam", stat = "median", title = "Consensus")
+
+p_consensus_know
+
+ggarrange(p_consensus_know, p_expert_know, p_consensus_know_rank, p_expert_know_rank, common.legend = TRUE, legend = "bottom")
+ggsave(filename = here("plots/combined_expert_consensus.png"), width = 12, height = 6)
+
+```
+```{r}
+plotConsensusQuality(data, smooth_method = "gam", stat = "median_rank", variable = "Expertise")
+
+```
+
+
+
+```{r}
+d_low_cor <- data %>%
+  filter(cor_landscape < 1.5)
+
+
+
+plotConsensusQuality(d_low_cor, smooth_method = "gam", stat = "median")
+```
+
+```{r}
+d_low_var <- data %>%
+  filter(var_landscape < 1.5)
+plotConsensusQuality(d_low_var, smooth_method = "gam", stat = "median_rank")
+
+```
+
